@@ -40,6 +40,6 @@ can just use helix for those particular scenarios.
 
 ## Elpaca
 
-I have chosen to stick with elpaca as it keeps startup times low, however I am
-making more of a conscious effort to lazy-load as many packages as possible to
-help improve initialisation times.
+I have chosen to stick with elpaca as it is fast, however, this time I am making
+a conscious effort to lazy-load as many packages as possible to keep
+initialisation times low.
