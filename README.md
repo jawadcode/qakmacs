@@ -29,13 +29,14 @@ however I suspect it wouldn't be too hard to implement these for Helix-Mode.
 ## [LSP-Mode](https://github.com/emacs-lsp/lsp-mode) vs. [Eglot](https://github.com/joaotavora/eglot)
 
 In general I have preferred LSP-Mode in both my from-scratch and my Doom Emacs
-configuration, due to how visually pleasing LSP-UI can be, however every single
-scenario in which I have tried it, it has been simply too laggy, seemingly even
-a significant hardware upgrade was not enough. From my time with helix I've
-realised that all that I really need are keyboard-triggered hover docs,
-completions, and inlay hints in order to be productive, so I decided to give up
-the bells and whistles of lsp-ui for eglot. I suspect I may have some issues in
-the future with wanting multiple LSPs for a particular major mode.
+configuration, due to how visually pleasing LSP-UI can be, however, in every
+single scenario in which I have tried it, it has been simply too laggy,
+seemingly even a significant hardware upgrade was not enough. From my time with
+helix I've realised that all that I really need are keyboard-triggered hover
+docs, completions, and inlay hints in order to be productive, so I decided to
+give up the bells and whistles of lsp-ui for eglot. I suspect I may have some
+issues in the future with wanting multiple LSPs for certain major modes, but I
+can just use helix for those particular scenarios.
 
 ## Elpaca
 
