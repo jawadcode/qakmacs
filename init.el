@@ -260,7 +260,35 @@
   :hook (elpaca-after-init . envrc-global-mode)
   :config (helix-define-key 'space "e" envrc-command-map))
 
-(use-package eglot :ensure nil)
+(defvar-keymap qak/eglot-map
+  :doc "Eglot Keymap"
+  "a" #'eglot-code-actions
+  "c" #'eglot-code-action-quickfix
+  "r" #'eglot-rename
+  "f" #'eglot-format
+  "n" #'eglot-reconnect
+  "s" #'consult-imenu)
+
+(use-package eglot
+  :ensure nil
+  :after helix
+  :hook (eglot-managed-mode . (lambda ()
+				(helix-define-key 'space "l" qak/eglot-map)))
+  :config
+  (when (eq system-type 'gnu/linux)
+    (setq-default eglot-workspace-configuration
+                  '(:nil (:formatting (:command ["alejandra"]))))
+    (add-to-list 'eglot-server-programs '(nix-ts-mode . ("nil"))))
+  (add-to-list 'eglot-server-programs
+               '(toml-ts-mode . ("taplo" "lsp" "stdio")))
+  (add-to-list 'eglot-server-programs
+               '(haskell-ts-mode . ("haskell-language-server-wrapper" "--lsp")))  
+  (add-to-list
+   'eglot-server-programs
+   '(astro-ts-mode . ("npx" "@astrojs/language-server" "--stdio"
+                      :initializationOptions
+                      (:typescript (:tsdk "./node_modules/typescript/lib")))))
+  :hook (python-ts-mode . eglot-ensure))
 
 (use-package yasnippet :config (yas-global-mode 1))
 
@@ -280,11 +308,16 @@
   :after corfu
   :config (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
+(use-package markdown-mode
+  :custom-face (markdown-code-face ((t :inherit fixed-pitch))))
+
 (use-package eldoc-box
   :custom (eldoc-box-mouse-mode-idle-delay 0.05)
+  :custom-face (eldoc-box-body ((t :inherit variable-pitch)))
   :hook
   (eglot-managed-mode . eldoc-box-hover-at-point-mode)
-  (eglot-managed-mode . eldoc-box-mouse-mode))
+  ;; (eglot-managed-mode . eldoc-box-mouse-mode)
+  )
 
 (use-package rust-ts-mode :ensure nil :hook (rust-ts-mode . eglot-ensure))
 
@@ -296,6 +329,62 @@
   (text-mode . mixed-pitch-mode)
   (markdown-ts-mode . mixed-pitch-mode))
 
+;; Credit to: https://www.reddit.com/r/emacs/comments/1bgdw0y/comment/kv6q2vl
+(defun qak/c-ts-indent-style()
+  `(;; do not indent preprocessor statements
+    ((node-is "preproc") column-0 0)
+    ;; do not indent namespace children
+    ((n-p-gp nil nil "namespace_definition") grand-parent 0)
+    ;; append to linux style
+    ,@(alist-get 'linux (c-ts-mode--indent-styles 'cpp))))
+
+(use-package c-ts-mode
+  :ensure nil
+  :hook (c-ts-mode . eglot-ensure)
+  :custom
+  (c-ts-mode-indent-offset 4)
+  (c-ts-mode-indent-style #'qak/c-ts-indent-style))
+
+(add-hook 'js-ts-mode-hook         #'eglot-ensure)
+(add-hook 'typescript-ts-mode-hook #'eglot-ensure)
+
+(use-package nix-ts-mode
+  :if (qak/nix-avail-p)
+  :mode "\\.nix\\'"
+  :hook (nix-ts-mode . eglot-ensure))
+
+(add-hook 'toml-ts-mode-hook #'eglot-ensure)
+
+(use-package meson-mode :hook (meson-mode . eglot-ensure))
+(use-package llvm-ts-mode :mode "\\.ll\\'")
+
+(use-package astro-ts-mode
+  :custom (astro-ts-mode-indent-offset 4)
+  :hook
+  (astro-ts-mode . eglot-ensure)
+  (astro-ts-mode . (lambda () (mixed-pitch-mode -1))))
+
+(use-package neocaml
+  :hook
+  (neocaml-mode . eglot-ensure)
+  (neocaml-mode . prettify-symbols-mode))
+
+(use-package haskell-ts-mode
+  :mode "\\.hs\\'"
+  :after helix
+  :hook
+  (haskell-ts-mode . eglot-ensure)
+  (haskell-ts-mode . prettify-symbols-mode))
+
+(use-package zig-ts-mode
+  :mode "\\.\\(zig\\|zon\\)\\'"
+  :hook (zig-ts-mode . eglot-ensure))
+
 (use-package hl-todo)
 
 (use-package consult-todo :after helix :config (helix-define-key 'space "t" #'consult-todo))
+
+;; === EXTRA ===
+
+(use-package transient)
+(use-package magit :after helix :config (helix-define-key 'space "g" #'magit))
