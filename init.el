@@ -136,6 +136,17 @@
 
 ;; === EDITOR FUNCTIONALITY ===
 
+;; Keybinds listed on the dashboard don't work :(((
+;; (use-package dashboard
+;;   :custom
+;;   (dashboard-center-content t)
+;;   (dashboard-vertically-center-content t)
+;;   (dashboard-startupify-list '(dashboard-insert-banner dashboard-insert-newline dashboard-insert-banner-title dashboard-insert-newline dashboard-insert-init-info dashboard-insert-items))
+;;   :config
+;;   (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
+;;   (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
+;;   (dashboard-setup-startup-hook))
+
 (use-package treesit-auto
   :demand t
   :custom (treesit-auto-install 'p)
@@ -150,7 +161,7 @@
 
 (defun qak/join-line-forward () (interactive) (join-line 1))
 
-(defvar-keymap qak/window-nav-map
+(defvar-keymap qak/window-map
   :doc "Window Manipulation"
   "h" #'windmove-left
   "j" #'windmove-down
@@ -158,6 +169,7 @@
   "l" #'windmove-right
   "v" #'split-window-right
   "s" #'split-window-below
+  "=" #'balance-windows
   "x" #'delete-window
   "q" #'kill-buffer-and-window)
 
@@ -180,7 +192,7 @@
   (helix-mode)
   (helix-define-key 'normal "J" #'qak/join-line-forward)
   (helix-define-key 'space  "c" #'qak/comment-line-or-region)
-  (helix-define-key 'space  "w"   qak/window-nav-map)
+  (helix-define-key 'space  "w"   qak/window-map)
   (helix-define-key 'space  "m"   qak/misc-map))
 
 
@@ -249,3 +261,41 @@
   :config (helix-define-key 'space "e" envrc-command-map))
 
 (use-package eglot :ensure nil)
+
+(use-package yasnippet :config (yas-global-mode 1))
+
+(use-package corfu
+  :custom
+  (corfu-auto t)
+  (corfu-auto-delay 0.075)
+  (corfu-auto-prefix 2)
+  (corfu-cycle t)
+  :bind ( :map corfu-map
+	  ("M-j"   . corfu-next)
+	  ("M-k"   . corfu-previous)
+	  ("<tab>" . corfu-complete))
+  :init (global-corfu-mode))
+
+(use-package kind-icon
+  :after corfu
+  :config (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+
+(use-package eldoc-box
+  :custom (eldoc-box-mouse-mode-idle-delay 0.05)
+  :hook
+  (eglot-managed-mode . eldoc-box-hover-at-point-mode)
+  (eglot-managed-mode . eldoc-box-mouse-mode))
+
+(use-package rust-ts-mode :ensure nil :hook (rust-ts-mode . eglot-ensure))
+
+;; TODO: When emacs 31 comes around this will be built-in
+(use-package markdown-ts-mode :mode ("\\.md\\'" . markdown-ts-mode))
+
+(use-package mixed-pitch
+  :hook
+  (text-mode . mixed-pitch-mode)
+  (markdown-ts-mode . mixed-pitch-mode))
+
+(use-package hl-todo)
+
+(use-package consult-todo :after helix :config (helix-define-key 'space "t" #'consult-todo))
