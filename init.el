@@ -267,7 +267,9 @@
   "r" #'eglot-rename
   "f" #'eglot-format
   "n" #'eglot-reconnect
-  "s" #'consult-imenu)
+  "d" #'consult-flymake
+  "s" #'consult-imenu
+  "S" #'consult-imenu-multi)
 
 (use-package eglot
   :ensure nil
@@ -312,12 +314,9 @@
   :custom-face (markdown-code-face ((t :inherit fixed-pitch))))
 
 (use-package eldoc-box
-  :custom (eldoc-box-mouse-mode-idle-delay 0.05)
   :custom-face (eldoc-box-body ((t :inherit variable-pitch)))
   :hook
-  (eglot-managed-mode . eldoc-box-hover-at-point-mode)
-  ;; (eglot-managed-mode . eldoc-box-mouse-mode)
-  )
+  (eglot-managed-mode . eldoc-box-hover-at-point-mode))
 
 (use-package rust-ts-mode :ensure nil :hook (rust-ts-mode . eglot-ensure))
 
@@ -382,7 +381,11 @@
 
 (use-package hl-todo)
 
-(use-package consult-todo :after helix :config (helix-define-key 'space "t" #'consult-todo))
+(use-package consult-todo
+  :after helix
+  :config
+  (helix-define-key 'space "t" #'consult-todo)
+  (helix-define-key 'space "T" #'consult-todo-project))
 
 ;; === EXTRA ===
 
