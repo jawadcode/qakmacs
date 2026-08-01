@@ -1,10 +1,9 @@
+.mc-lists.el
 .cache/
+.lsp-session-v1
 auto-save-list/
 eln-cache/
 elpaca/
 projects
 snippets/
-transient/
 tree-sitter/
-recentf
-.mc-lists.el

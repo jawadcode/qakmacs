@@ -2,23 +2,37 @@
 
 (defun set-font ()
   (progn
-    (set-face-attribute 'default nil :family "Iosevka Term SS07" :height 135)
-    (set-face-attribute 'fixed-pitch nil :family "Iosevka Term SS07")
-    (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif")))
+    (set-face-attribute 'default        nil :family "Iosevka Term SS07" :height 135)
+    (set-face-attribute 'fixed-pitch    nil :family "Iosevka Term SS07")
+    (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif")
+    (set-fontset-font
+     t
+     'symbol
+     (cond
+      ((eq system-type 'windows-nt) "Segoe UI Symbol")
+      ((eq system-type 'darwin)     "Apple Symbols")
+      ((eq system-type 'gnu/linux)  "Symbola")))
+    (set-fontset-font
+     t
+     'emoji
+     (cond
+      ((eq system-type 'windows-nt) "Segoe UI Emoji")
+      ((eq system-type 'darwin)     "Apple Color Emoji")
+      ((eq system-type 'gnu/linux)  "Noto Color Emoji")))))
 
 (if (daemonp)
     (add-hook 'server-after-make-frame-hook #'set-font)
   (set-font))
 
-(if (eq system-type 'windows-nt)
-    (when (member "Noto Emoji" (font-family-list))
-      (set-fontset-font t
-                        'emoji
-                        (font-spec :family "Noto Emoji" :size 18)))
-  (when (member "Noto Color Emoji" (font-family-list))
-    (set-fontset-font t
-                      'emoji
-                      (font-spec :family "Noto Color Emoji" :size 18))))
+;; (if (eq system-type 'windows-nt)
+;;     (when (member "Noto Emoji" (font-family-list))
+;;       (set-fontset-font t
+;;                         'emoji
+;;                         (font-spec :family "Noto Emoji" :size 18)))
+;;   (when (member "Noto Color Emoji" (font-family-list))
+;;     (set-fontset-font t
+;;                       'emoji
+;;                       (font-spec :family "Noto Color Emoji" :size 18))))
 
 ;; === BEGIN ELPACA LOADER ===
 
@@ -71,12 +85,23 @@
 
 ;; === CORE ===
 
-(use-package compat :ensure ( :wait t) :demand t)
+(use-package gcmh
+  :demand t
+  :ensure ( :wait t)
+  ;; Don't use this hack if the new IGC garbage collector is being used
+  :unless (fboundp 'igc-info)
+  :custom
+  (gcmh-idle-delay 'auto)
+  (gcmh-auto-idle-delay-factor 10)
+  (gcmh-high-cons-threshold (* 64 1024 1024)) ; 64 MiB
+  :config (gcmh-mode 1))
+
+;; (use-package compat :demand t) ; To resolve versioning issues
 
 (use-package doom-themes
   :demand t
   :custom
-  (doom-themes-enable-bold t)
+  (doom-themes-enable-bold   t)
   (doom-themes-enable-italic t)
   :config (load-theme 'doom-molokai t))
 
@@ -88,35 +113,35 @@
 (use-package emacs
   :ensure nil
   :hook (prog-mode . (lambda ()
-		       (display-line-numbers-mode)
-		       (hl-line-mode)
-		       (electric-pair-mode)))
+                       (display-line-numbers-mode)
+                       (hl-line-mode)
+                       (electric-pair-mode)))
   :custom
   ;; backup files config
-  (backup-by-copying t) ; don't clobber symlinks
-  (backup-directory-alist `(("." .
-                             ,(file-name-concat
-                               (getenv "HOME")
-                               ".emacs-saves/")))) ; don't litter my fs tree
-  (delete-old-versions t)
-  (kept-new-versions 6)
-  (kept-old-versions 2)
-  (version-control t) ; use versioned backups
-  (create-lockfiles nil)
+  (backup-by-copying              t) ; don't clobber symlinks
+  (backup-directory-alist         `(("." . ,(file-name-concat
+                                             (getenv "HOME")
+                                             ".emacs-saves/")))) ; don't litter my fs tree
+  (delete-old-versions            t)
+  (kept-new-versions              6)
+  (kept-old-versions              2)
+  (version-control                t) ; use versioned backups
+  (create-lockfiles               nil)
   ;; Autosave files config
   (auto-save-file-name-transforms `((".*" ,temporary-file-directory t)))
-  :bind (("C-+" . text-scale-increase)
-         ("C--" . text-scale-decrease)
-         ("C-<wheel-up>" . text-scale-increase)
-         ("C-<wheel-down>" . text-scale-decrease)
-         ("C-<tab>" . tab-line-switch-to-next-tab)
+  :bind (("C-+"             . text-scale-increase)
+         ("C--"             . text-scale-decrease)
+         ("C-<wheel-up>"    . text-scale-increase)
+         ("C-<wheel-down>"  . text-scale-decrease)
+         ("C-<tab>"         . tab-line-switch-to-next-tab)
          ("C-<iso-lefttab>" . tab-line-switch-to-prev-tab)
-         ("C-S-<tab>" . tab-line-switch-to-prev-tab))
+         ("C-S-<tab>"       . tab-line-switch-to-prev-tab))
   :config
   (add-to-list 'auto-mode-alist '("\\.cabal\\'" . prog-mode))
   (global-auto-revert-mode)
   (global-tab-line-mode)
   (window-divider-mode))
+
 (elpaca-wait)
 
 ;; === MINIBUFFER PACKAGES ===
@@ -125,8 +150,8 @@
   :demand t
   :config (vertico-mode 1)
   :bind ( :map vertico-map
-	  ("M-j" . vertico-next)
-	  ("M-k" . vertico-previous)))
+          ("M-j" . vertico-next)
+          ("M-k" . vertico-previous)))
 
 (use-package marginalia :demand t :config (marginalia-mode 1))
 
@@ -135,17 +160,6 @@
 (use-package consult :demand t :config (setq completion-in-region-function 'consult-completion-in-region))
 
 ;; === EDITOR FUNCTIONALITY ===
-
-;; Keybinds listed on the dashboard don't work :(((
-;; (use-package dashboard
-;;   :custom
-;;   (dashboard-center-content t)
-;;   (dashboard-vertically-center-content t)
-;;   (dashboard-startupify-list '(dashboard-insert-banner dashboard-insert-newline dashboard-insert-banner-title dashboard-insert-newline dashboard-insert-init-info dashboard-insert-items))
-;;   :config
-;;   (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
-;;   (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
-;;   (dashboard-setup-startup-hook))
 
 (use-package treesit-auto
   :demand t
@@ -179,7 +193,7 @@
   "f" #'find-file
   "q" #'save-buffers-kill-emacs)
 
-;; Because `comment-dwim' does not do what I mean :p
+;; Because `comment-dwim' does not in fact do what I mean :p
 (defun qak/comment-line-or-region ()
   (interactive)
   (if (use-region-p)
@@ -198,9 +212,9 @@
 
 (use-package which-key
   :custom
-  (which-key-idle-delay 0.05)
-  (which-key-add-column-padding 0)
-  (which-key-show-docstrings t)
+  (which-key-idle-delay             0.05)
+  (which-key-add-column-padding     0)
+  (which-key-show-docstrings        t)
   (which-key-max-description-length 60)
   :config (which-key-mode 1))
 
@@ -260,37 +274,60 @@
   :hook (elpaca-after-init . envrc-global-mode)
   :config (helix-define-key 'space "e" envrc-command-map))
 
-(defvar-keymap qak/eglot-map
-  :doc "Eglot Keymap"
-  "a" #'eglot-code-actions
-  "c" #'eglot-code-action-quickfix
-  "r" #'eglot-rename
-  "f" #'eglot-format
-  "n" #'eglot-reconnect
-  "d" #'consult-flymake
-  "s" #'consult-imenu
-  "S" #'consult-imenu-multi)
+;; Vastly simplified from doomemacs' `+lsp-optimization-mode' code
+(defvar qak/lsp-gc-optimised-p nil)
 
-(use-package eglot
-  :ensure nil
+(use-package lsp-mode
   :after helix
-  :hook (eglot-managed-mode . (lambda ()
-				(helix-define-key 'space "l" qak/eglot-map)))
+  :custom
+  (lsp-completion-provider     :none)
+  (lsp-keymap-prefix           "C-c l")
+  (lsp-signature-auto-activate nil)
+  (lsp-ui-doc-delay            0.075)
+  (lsp-ui-doc-show-with-cursor t)
+  (lsp-ui-doc-show-with-mouse  t)
+  :hook
+  (lsp-mode . lsp-enable-which-key-integration)
+  (lsp-mode . lsp-inlay-hints-mode)
   :config
-  (when (eq system-type 'gnu/linux)
-    (setq-default eglot-workspace-configuration
-                  '(:nil (:formatting (:command ["alejandra"]))))
-    (add-to-list 'eglot-server-programs '(nix-ts-mode . ("nil"))))
-  (add-to-list 'eglot-server-programs
-               '(toml-ts-mode . ("taplo" "lsp" "stdio")))
-  (add-to-list 'eglot-server-programs
-               '(haskell-ts-mode . ("haskell-language-server-wrapper" "--lsp")))  
-  (add-to-list
-   'eglot-server-programs
-   '(astro-ts-mode . ("npx" "@astrojs/language-server" "--stdio"
-                      :initializationOptions
-                      (:typescript (:tsdk "./node_modules/typescript/lib")))))
-  :hook (python-ts-mode . eglot-ensure))
+  ;; Bump up garbage collection threshold through `gcmh' to prevent LSP-induced
+  ;; allocations from slowing down/freezing the UI.
+  (unless (or qak/lsp-gc-optimised-p (fboundp 'igc-info))
+    (setq-default gcmh-high-cons-threshold
+                  (* 2 (default-value 'gcmh-high-cons-threshold)))
+    (gcmh-set-high-threshold)
+    (setq qak/lsp-gc-optimised-p t))
+  
+  (helix-define-key 'space  "a"   #'lsp-execute-code-action)
+  (helix-define-key 'space  "r"   #'lsp-rename)
+  (helix-define-key 'normal "g d" #'lsp-find-definition)
+  (helix-define-key 'normal "g i" #'lsp-find-implementation)
+  (helix-define-key 'normal "g r" #'lsp-find-references)
+  (helix-define-key 'normal "g y" #'lsp-find-type-definition))
+
+(use-package lsp-ui)
+
+(use-package lsp-rust
+  :ensure nil
+  :after lsp-mode
+  :custom
+  (lsp-rust-analyzer-display-chaining-hints                t)
+  (lsp-rust-analyzer-display-reborrow-hints                t)
+  (lsp-rust-analyzer-display-parameter-hints               t)
+  (lsp-rust-analyzer-display-closure-return-type-hints     t)
+  (lsp-rust-analyzer-display-lifetime-elision-hints-enable t))
+
+(use-package consult-lsp
+  :after helix
+  :config
+  (helix-define-key 'space "d" #'consult-lsp-file-diagnostics)
+  (helix-define-key 'space "D" #'consult-lsp-diagnostics)
+  (helix-define-key 'space "s" #'consult-lsp-file-symbols)
+  (helix-define-key 'space "D" #'consult-lsp-symbols))
+
+(use-package flymake
+  :ensure nil
+  :config )
 
 (use-package yasnippet :config (yas-global-mode 1))
 
@@ -301,9 +338,9 @@
   (corfu-auto-prefix 2)
   (corfu-cycle t)
   :bind ( :map corfu-map
-	  ("M-j"   . corfu-next)
-	  ("M-k"   . corfu-previous)
-	  ("<tab>" . corfu-complete))
+          ("M-j"   . corfu-next)
+          ("M-k"   . corfu-previous)
+          ("<tab>" . corfu-complete))
   :init (global-corfu-mode))
 
 (use-package kind-icon
@@ -313,12 +350,12 @@
 (use-package markdown-mode
   :custom-face (markdown-code-face ((t :inherit fixed-pitch))))
 
-(use-package eldoc-box
-  :custom-face (eldoc-box-body ((t :inherit variable-pitch)))
+(use-package rust-ts-mode
+  :ensure nil
   :hook
-  (eglot-managed-mode . eldoc-box-hover-at-point-mode))
-
-(use-package rust-ts-mode :ensure nil :hook (rust-ts-mode . eglot-ensure))
+  (rust-ts-mode . lsp-deferred)
+  (rust-ts-mode . (lambda ()
+                    (remove-hook 'flymake-diagnostic-functions #'rust-ts-flymake t))))
 
 ;; TODO: When emacs 31 comes around this will be built-in
 (use-package markdown-ts-mode :mode ("\\.md\\'" . markdown-ts-mode))
@@ -339,45 +376,47 @@
 
 (use-package c-ts-mode
   :ensure nil
-  :hook (c-ts-mode . eglot-ensure)
+  :hook
+  (c-ts-mode   . lsp-deferred)
+  (c++-ts-mode . lsp-deferred)
   :custom
-  (c-ts-mode-indent-offset 4)
+  (c-ts-mode-indent-offset  4)
   (c-ts-mode-indent-style #'qak/c-ts-indent-style))
 
-(add-hook 'js-ts-mode-hook         #'eglot-ensure)
-(add-hook 'typescript-ts-mode-hook #'eglot-ensure)
+(add-hook 'js-ts-mode-hook         #'lsp-deferred)
+(add-hook 'typescript-ts-mode-hook #'lsp-deferred)
 
 (use-package nix-ts-mode
   :if (qak/nix-avail-p)
   :mode "\\.nix\\'"
-  :hook (nix-ts-mode . eglot-ensure))
+  :hook (nix-ts-mode . lsp-deferred))
 
-(add-hook 'toml-ts-mode-hook #'eglot-ensure)
+(add-hook 'toml-ts-mode-hook #'lsp-deferred)
 
-(use-package meson-mode :hook (meson-mode . eglot-ensure))
+(use-package meson-mode :hook (meson-mode . lsp-deferred))
 (use-package llvm-ts-mode :mode "\\.ll\\'")
 
 (use-package astro-ts-mode
   :custom (astro-ts-mode-indent-offset 4)
   :hook
-  (astro-ts-mode . eglot-ensure)
+  (astro-ts-mode . lsp-deferred)
   (astro-ts-mode . (lambda () (mixed-pitch-mode -1))))
 
 (use-package neocaml
   :hook
-  (neocaml-mode . eglot-ensure)
+  (neocaml-mode . lsp-deferred)
   (neocaml-mode . prettify-symbols-mode))
 
 (use-package haskell-ts-mode
   :mode "\\.hs\\'"
   :after helix
   :hook
-  (haskell-ts-mode . eglot-ensure)
+  (haskell-ts-mode . lsp-deferred)
   (haskell-ts-mode . prettify-symbols-mode))
 
 (use-package zig-ts-mode
   :mode "\\.\\(zig\\|zon\\)\\'"
-  :hook (zig-ts-mode . eglot-ensure))
+  :hook (zig-ts-mode . lsp-deferred))
 
 (use-package hl-todo)
 
@@ -389,5 +428,6 @@
 
 ;; === EXTRA ===
 
-(use-package transient)
+(use-package transient) ; To resolve versioning issues
+
 (use-package magit :after helix :config (helix-define-key 'space "g" #'magit))
