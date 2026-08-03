@@ -173,7 +173,10 @@
 
 (use-package avy)
 
-(defun qak/join-line-forward () (interactive) (join-line 1))
+(defun qak/shrink-window ()
+  "Shrink window to 80 characters"
+  (interactive)
+  (window-resize nil (- 86 (window-width)) t))
 
 (defvar-keymap qak/window-map
   :doc "Window Manipulation"
@@ -184,6 +187,7 @@
   "v" #'split-window-right
   "s" #'split-window-below
   "=" #'balance-windows
+  "-" #'qak/shrink-window
   "x" #'delete-window
   "q" #'kill-buffer-and-window)
 
@@ -192,6 +196,8 @@
   "s" #'save-buffer
   "f" #'find-file
   "q" #'save-buffers-kill-emacs)
+
+(defun qak/join-line-forward () (interactive) (join-line 1))
 
 ;; Because `comment-dwim' does not in fact do what I mean :p
 (defun qak/comment-line-or-region ()
@@ -281,6 +287,7 @@
   :after helix
   :custom
   (lsp-completion-provider     :none)
+  (lsp-format-buffer-on-save   t)
   (lsp-keymap-prefix           "C-c l")
   (lsp-signature-auto-activate nil)
   (lsp-ui-doc-delay            0.075)
@@ -312,7 +319,7 @@
   :after lsp-mode
   :custom
   (lsp-rust-analyzer-display-chaining-hints                t)
-  (lsp-rust-analyzer-display-reborrow-hints                t)
+  (lsp-rust-analyzer-display-reborrow-hints                nil)
   (lsp-rust-analyzer-display-parameter-hints               t)
   (lsp-rust-analyzer-display-closure-return-type-hints     t)
   (lsp-rust-analyzer-display-lifetime-elision-hints-enable t))
@@ -418,7 +425,7 @@
   :mode "\\.\\(zig\\|zon\\)\\'"
   :hook (zig-ts-mode . lsp-deferred))
 
-(use-package hl-todo)
+(use-package hl-todo :hook (prog-mode . hl-todo-mode))
 
 (use-package consult-todo
   :after helix
