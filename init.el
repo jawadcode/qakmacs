@@ -1,4 +1,4 @@
-; Initialisation -*- lexical-binding: t -*-
+;; Initialisation -*- lexical-binding: t -*-
 
 (defun set-font ()
   (progn
@@ -283,19 +283,30 @@
 ;; Vastly simplified from doomemacs' `+lsp-optimization-mode' code
 (defvar qak/lsp-gc-optimised-p nil)
 
+;; (defvar-keymap qak/lsp-goto-map
+;;   :doc "LSP Goto Keybindings"
+;;   "d" #'lsp-find-definition
+;;   "i" #'lsp-find-implementation
+;;   "r" #'lsp-find-references
+;;   "y" #'lsp-find-type-definition)
+
 (use-package lsp-mode
   :after helix
   :custom
   (lsp-completion-provider     :none)
   (lsp-format-buffer-on-save   t)
   (lsp-keymap-prefix           "C-c l")
-  (lsp-signature-auto-activate nil)
+  ;; (lsp-signature-auto-activate nil)
   (lsp-ui-doc-delay            0.075)
   (lsp-ui-doc-show-with-cursor t)
   (lsp-ui-doc-show-with-mouse  t)
+  
+  (lsp-eldoc-enable-hover             nil)
+  (lsp-eldoc-render-all               nil)
+  (lsp-signature-auto-activate        nil)
+  (lsp-signature-render-documentation nil)
   :hook
   (lsp-mode . lsp-enable-which-key-integration)
-  (lsp-mode . lsp-inlay-hints-mode)
   :config
   ;; Bump up garbage collection threshold through `gcmh' to prevent LSP-induced
   ;; allocations from slowing down/freezing the UI.
@@ -304,19 +315,27 @@
                   (* 2 (default-value 'gcmh-high-cons-threshold)))
     (gcmh-set-high-threshold)
     (setq qak/lsp-gc-optimised-p t))
+
+  (helix-define-key 'space "a" #'lsp-execute-code-action)
+  (helix-define-key 'space "l"   lsp-command-map)
+  (helix-define-key 'space "r" #'lsp-rename)
   
-  (helix-define-key 'space  "a"   #'lsp-execute-code-action)
-  (helix-define-key 'space  "r"   #'lsp-rename)
-  (helix-define-key 'normal "g d" #'lsp-find-definition)
-  (helix-define-key 'normal "g i" #'lsp-find-implementation)
-  (helix-define-key 'normal "g r" #'lsp-find-references)
-  (helix-define-key 'normal "g y" #'lsp-find-type-definition))
+  (define-key helix-goto-map "d" #'lsp-find-definition)
+  (define-key helix-goto-map "i" #'lsp-find-implementation)
+  (define-key helix-goto-map "r" #'lsp-find-references)
+  (define-key helix-goto-map "y" #'lsp-find-type-definition))
 
 (use-package lsp-ui)
+
+(defun qak/lsp-hook ()
+  "Enable LSP with inlay hints"
+  (lsp-deferred)
+  (lsp-inlay-hints-mode))
 
 (use-package lsp-rust
   :ensure nil
   :after lsp-mode
+  :hook (rust-ts-mode . qak/lsp-hook)
   :custom
   (lsp-rust-analyzer-display-chaining-hints                t)
   (lsp-rust-analyzer-display-reborrow-hints                nil)
@@ -324,17 +343,24 @@
   (lsp-rust-analyzer-display-closure-return-type-hints     t)
   (lsp-rust-analyzer-display-lifetime-elision-hints-enable t))
 
+(use-package lsp-nix
+  :ensure nil
+  :after lsp-mode
+  :hook (nix-ts-mode . qak/lsp-hook)
+  :custom (lsp-nix-nixd-formatting-command ["nixpkgs-fmt"]))
+
+;; 3rd-party package
+(use-package lsp-pyright
+  :hook (python-mode . (lambda () (require 'lsp-pyright) (qak/lsp-hook)))
+  :custom (lsp-pyright-langserver-command "basedpyright"))
+
 (use-package consult-lsp
   :after helix
   :config
   (helix-define-key 'space "d" #'consult-lsp-file-diagnostics)
   (helix-define-key 'space "D" #'consult-lsp-diagnostics)
   (helix-define-key 'space "s" #'consult-lsp-file-symbols)
-  (helix-define-key 'space "D" #'consult-lsp-symbols))
-
-(use-package flymake
-  :ensure nil
-  :config )
+  (helix-define-key 'space "S" #'consult-lsp-symbols))
 
 (use-package yasnippet :config (yas-global-mode 1))
 
@@ -360,9 +386,9 @@
 (use-package rust-ts-mode
   :ensure nil
   :hook
-  (rust-ts-mode . lsp-deferred)
   (rust-ts-mode . (lambda ()
-                    (remove-hook 'flymake-diagnostic-functions #'rust-ts-flymake t))))
+                    (remove-hook 'flymake-diagnostic-functions
+				 #'rust-ts-flymake t))))
 
 ;; TODO: When emacs 31 comes around this will be built-in
 (use-package markdown-ts-mode :mode ("\\.md\\'" . markdown-ts-mode))
@@ -384,46 +410,43 @@
 (use-package c-ts-mode
   :ensure nil
   :hook
-  (c-ts-mode   . lsp-deferred)
-  (c++-ts-mode . lsp-deferred)
+  (c-ts-mode   . qak/lsp-hook)
+  (c++-ts-mode . qak/lsp-hook)  
   :custom
   (c-ts-mode-indent-offset  4)
   (c-ts-mode-indent-style #'qak/c-ts-indent-style))
 
-(add-hook 'js-ts-mode-hook         #'lsp-deferred)
-(add-hook 'typescript-ts-mode-hook #'lsp-deferred)
+(add-hook 'js-ts-mode-hook         #'qak/lsp-hook)
+(add-hook 'typescript-ts-mode-hook #'qak/lsp-hook)
 
-(use-package nix-ts-mode
-  :if (qak/nix-avail-p)
-  :mode "\\.nix\\'"
-  :hook (nix-ts-mode . lsp-deferred))
+(use-package nix-ts-mode :if (qak/nix-avail-p) :mode "\\.nix\\'")
 
 (add-hook 'toml-ts-mode-hook #'lsp-deferred)
 
-(use-package meson-mode :hook (meson-mode . lsp-deferred))
+(use-package meson-mode :hook (meson-mode . qak/lsp-hook))
 (use-package llvm-ts-mode :mode "\\.ll\\'")
 
 (use-package astro-ts-mode
   :custom (astro-ts-mode-indent-offset 4)
   :hook
-  (astro-ts-mode . lsp-deferred)
+  (astro-ts-mode . qak/lsp-hook)
   (astro-ts-mode . (lambda () (mixed-pitch-mode -1))))
 
 (use-package neocaml
   :hook
-  (neocaml-mode . lsp-deferred)
+  (neocaml-mode . qak/lsp-hook)
   (neocaml-mode . prettify-symbols-mode))
 
 (use-package haskell-ts-mode
   :mode "\\.hs\\'"
   :after helix
   :hook
-  (haskell-ts-mode . lsp-deferred)
+  (haskell-ts-mode . qak/lsp-hook)
   (haskell-ts-mode . prettify-symbols-mode))
 
 (use-package zig-ts-mode
   :mode "\\.\\(zig\\|zon\\)\\'"
-  :hook (zig-ts-mode . lsp-deferred))
+  :hook (zig-ts-mode . qak/lsp-hook))
 
 (use-package hl-todo :hook (prog-mode . hl-todo-mode))
 
