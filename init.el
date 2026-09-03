@@ -20,6 +20,8 @@
       ((eq system-type 'darwin)     "Apple Color Emoji")
       ((eq system-type 'gnu/linux)  "Noto Color Emoji")))))
 
+(add-to-list 'default-frame-alist '(alpha-background . 85))
+
 (if (daemonp)
     (add-hook 'server-after-make-frame-hook #'set-font)
   (set-font))
@@ -224,6 +226,8 @@
   (which-key-max-description-length 60)
   :config (which-key-mode 1))
 
+(use-package editorconfig :ensure nil :config (editorconfig-mode 1))
+
 (use-package combobulate
   :ensure (combobulate :host github :repo "mickeynp/combobulate")
   :after helix
@@ -283,27 +287,16 @@
 ;; Vastly simplified from doomemacs' `+lsp-optimization-mode' code
 (defvar qak/lsp-gc-optimised-p nil)
 
-;; (defvar-keymap qak/lsp-goto-map
-;;   :doc "LSP Goto Keybindings"
-;;   "d" #'lsp-find-definition
-;;   "i" #'lsp-find-implementation
-;;   "r" #'lsp-find-references
-;;   "y" #'lsp-find-type-definition)
-
 (use-package lsp-mode
   :after helix
   :custom
   (lsp-completion-provider     :none)
   (lsp-format-buffer-on-save   t)
   (lsp-keymap-prefix           "C-c l")
-  ;; (lsp-signature-auto-activate nil)
-  (lsp-ui-doc-delay            0.075)
-  (lsp-ui-doc-show-with-cursor t)
-  (lsp-ui-doc-show-with-mouse  t)
-  
-  (lsp-eldoc-enable-hover             nil)
-  (lsp-eldoc-render-all               nil)
-  (lsp-signature-auto-activate        nil)
+  ;; UI
+  (lsp-inlay-hint-enable              t)
+  (lsp-ui-doc-delay                   0.075)
+  (lsp-ui-doc-show-with-mouse         t)
   (lsp-signature-render-documentation nil)
   :hook
   (lsp-mode . lsp-enable-which-key-integration)
@@ -317,6 +310,7 @@
     (setq qak/lsp-gc-optimised-p t))
 
   (helix-define-key 'space "a" #'lsp-execute-code-action)
+  (helix-define-key 'space "k" #'lsp-ui-doc-glance)
   (helix-define-key 'space "l"   lsp-command-map)
   (helix-define-key 'space "r" #'lsp-rename)
   
@@ -335,7 +329,6 @@
 (use-package lsp-rust
   :ensure nil
   :after lsp-mode
-  :hook (rust-ts-mode . qak/lsp-hook)
   :custom
   (lsp-rust-analyzer-display-chaining-hints                t)
   (lsp-rust-analyzer-display-reborrow-hints                nil)
@@ -362,7 +355,17 @@
   (helix-define-key 'space "s" #'consult-lsp-file-symbols)
   (helix-define-key 'space "S" #'consult-lsp-symbols))
 
-(use-package yasnippet :config (yas-global-mode 1))
+;; (use-package yasnippet :config (yas-global-mode -1))
+
+(use-package tempel :bind (("M-l" . tempel-next)
+			   ("M-h" . tempel-previous)))
+
+(use-package tempel-collection)
+
+(use-package lsp-snippet-tempel
+  :ensure (lsp-snippet-tempel :type git :host github :repo "svaante/lsp-snippet")
+  :after tempel
+  :config (when (featurep 'lsp-mode) (lsp-snippet-tempel-lsp-mode-init)))
 
 (use-package corfu
   :custom
@@ -374,7 +377,12 @@
           ("M-j"   . corfu-next)
           ("M-k"   . corfu-previous)
           ("<tab>" . corfu-complete))
-  :init (global-corfu-mode))
+  :init (global-corfu-mode)
+  :config
+  (corfu-popupinfo-mode 1)
+  (setq corfu-popupinfo-delay '(0.4 . 0.2)))
+
+(use-package corfu-prescient :after corfu :config (corfu-prescient-mode 1))
 
 (use-package kind-icon
   :after corfu
@@ -388,7 +396,8 @@
   :hook
   (rust-ts-mode . (lambda ()
                     (remove-hook 'flymake-diagnostic-functions
-				 #'rust-ts-flymake t))))
+				 #'rust-ts-flymake t)))
+  (rust-ts-mode . qak/lsp-hook))
 
 ;; TODO: When emacs 31 comes around this will be built-in
 (use-package markdown-ts-mode :mode ("\\.md\\'" . markdown-ts-mode))
@@ -437,16 +446,33 @@
   (neocaml-mode . qak/lsp-hook)
   (neocaml-mode . prettify-symbols-mode))
 
+(use-package lsp-haskell)
+
 (use-package haskell-ts-mode
   :mode "\\.hs\\'"
-  :after helix
   :hook
-  (haskell-ts-mode . qak/lsp-hook)
-  (haskell-ts-mode . prettify-symbols-mode))
+  (haskell-ts-mode . prettify-symbols-mode)
+  (haskell-ts-mode . qak/lsp-hook))
 
 (use-package zig-ts-mode
   :mode "\\.\\(zig\\|zon\\)\\'"
   :hook (zig-ts-mode . qak/lsp-hook))
+
+(use-package nael :hook (nael-mode . qak/lsp-hook))
+
+(use-package nael-lsp :after nael)
+
+(use-package qml-ts-mode
+  :ensure (qml-ts-mode :type git :host github :repo "xhcoding/qml-ts-mode")
+  :config
+  (add-to-list 'lsp-language-id-configuration '(qml-ts-mode . "qml-ts"))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("qmlls" "-E"))
+                    :activation-fn (lsp-activate-on "qml-ts")
+                    :server-id 'qmlls))
+  :hook (qml-ts-mode . (lambda ()
+			 (setq-local electric-indent-chars '(?\n ?\( ?\) ?{ ?} ?\[ ?\] ?\; ?,))
+			 (qak/lsp-hook))))
 
 (use-package hl-todo :hook (prog-mode . hl-todo-mode))
 
