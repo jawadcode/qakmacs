@@ -331,7 +331,6 @@
   :after lsp-mode
   :custom
   (lsp-rust-analyzer-display-chaining-hints                t)
-  (lsp-rust-analyzer-display-reborrow-hints                nil)
   (lsp-rust-analyzer-display-parameter-hints               t)
   (lsp-rust-analyzer-display-closure-return-type-hints     t)
   (lsp-rust-analyzer-display-lifetime-elision-hints-enable t))
@@ -407,14 +406,15 @@
   (text-mode . mixed-pitch-mode)
   (markdown-ts-mode . mixed-pitch-mode))
 
-;; Credit to: https://www.reddit.com/r/emacs/comments/1bgdw0y/comment/kv6q2vl
-(defun qak/c-ts-indent-style()
-  `(;; do not indent preprocessor statements
-    ((node-is "preproc") column-0 0)
-    ;; do not indent namespace children
-    ((n-p-gp nil nil "namespace_definition") grand-parent 0)
-    ;; append to linux style
-    ,@(alist-get 'linux (c-ts-mode--indent-styles 'cpp))))
+;; Broken on emacs 31 due to `c-ts-mode--indent-styles' being removed
+;; ;; Credit to: https://www.reddit.com/r/emacs/comments/1bgdw0y/comment/kv6q2vl
+;; (defun qak/c-ts-indent-style()
+;;   `(;; do not indent preprocessor statements
+;;     ((node-is "preproc") column-0 0)
+;;     ;; do not indent namespace children
+;;     ((n-p-gp nil nil "namespace_definition") grand-parent 0)
+;;     ;; append to linux style
+;;     ,@(alist-get 'linux (c-ts-mode--indent-styles 'cpp))))
 
 (use-package c-ts-mode
   :ensure nil
@@ -423,7 +423,8 @@
   (c++-ts-mode . qak/lsp-hook)  
   :custom
   (c-ts-mode-indent-offset  4)
-  (c-ts-mode-indent-style #'qak/c-ts-indent-style))
+  ;; (c-ts-mode-indent-style #'qak/c-ts-indent-style)
+  (c-ts-mode-indent-style #'k&r))
 
 (add-hook 'js-ts-mode-hook         #'qak/lsp-hook)
 (add-hook 'typescript-ts-mode-hook #'qak/lsp-hook)
