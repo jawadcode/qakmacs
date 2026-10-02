@@ -78,4 +78,3 @@
   (set-font))
 
 (add-to-list 'default-frame-alist '(alpha-background . 85))
-
