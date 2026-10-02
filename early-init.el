@@ -52,3 +52,30 @@
 (advice-add #'display-startup-echo-area-message :override #'ignore)
 ;; Fully suppress vanilla startup screen
 (advice-add #'display-startup-screen :override #'ignore)
+
+(defun set-font ()
+  (progn
+    (set-face-attribute 'default        nil :family "Iosevka Term SS07" :height 135)
+    (set-face-attribute 'fixed-pitch    nil :family "Iosevka Term SS07")
+    (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif")
+    (set-fontset-font
+     t
+     'symbol
+     (cond
+      ((eq system-type 'windows-nt) "Segoe UI Symbol")
+      ((eq system-type 'darwin)     "Apple Symbols")
+      ((eq system-type 'gnu/linux)  "Symbola")))
+    (set-fontset-font
+     t
+     'emoji
+     (cond
+      ((eq system-type 'windows-nt) "Segoe UI Emoji")
+      ((eq system-type 'darwin)     "Apple Color Emoji")
+      ((eq system-type 'gnu/linux)  "Noto Color Emoji")))))
+
+(if (daemonp)
+    (add-hook 'server-after-make-frame-hook #'set-font)
+  (set-font))
+
+(add-to-list 'default-frame-alist '(alpha-background . 85))
+

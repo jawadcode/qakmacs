@@ -1,30 +1,5 @@
 ;; Initialisation -*- lexical-binding: t -*-
-
-(defun set-font ()
-  (progn
-    (set-face-attribute 'default        nil :family "Iosevka Term SS07" :height 135)
-    (set-face-attribute 'fixed-pitch    nil :family "Iosevka Term SS07")
-    (set-face-attribute 'variable-pitch nil :family "IBM Plex Serif")
-    (set-fontset-font
-     t
-     'symbol
-     (cond
-      ((eq system-type 'windows-nt) "Segoe UI Symbol")
-      ((eq system-type 'darwin)     "Apple Symbols")
-      ((eq system-type 'gnu/linux)  "Symbola")))
-    (set-fontset-font
-     t
-     'emoji
-     (cond
-      ((eq system-type 'windows-nt) "Segoe UI Emoji")
-      ((eq system-type 'darwin)     "Apple Color Emoji")
-      ((eq system-type 'gnu/linux)  "Noto Color Emoji")))))
-
-(add-to-list 'default-frame-alist '(alpha-background . 85))
-
-(if (daemonp)
-    (add-hook 'server-after-make-frame-hook #'set-font)
-  (set-font))
+(setq use-package-compute-statistics t)
 
 ;; (if (eq system-type 'windows-nt)
 ;;     (when (member "Noto Emoji" (font-family-list))
@@ -309,6 +284,15 @@
     (gcmh-set-high-threshold)
     (setq qak/lsp-gc-optimised-p t))
 
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection (lambda () lsp-ocaml-lang-server-command))
+                    :major-modes '(neocaml-dune-mode neocaml-ocamllex-mode neocaml-menhir-mode)
+                    :priority -1
+                    :server-id 'ocaml-ls-aux-filetypes))
+  (add-to-list 'lsp-language-id-configuration '(neocaml-dune-mode . "dune"))
+  (add-to-list 'lsp-language-id-configuration '(neocaml-ocamllex-mode . "ocaml.ocamllex"))
+  (add-to-list 'lsp-language-id-configuration '(neocaml-menhir-mode . "ocaml.menhir"))
+  
   (helix-define-key 'space "a" #'lsp-execute-code-action)
   (helix-define-key 'space "k" #'lsp-ui-doc-glance)
   (helix-define-key 'space "l"   lsp-command-map)
@@ -444,8 +428,10 @@
 
 (use-package neocaml
   :hook
-  (neocaml-mode . qak/lsp-hook)
-  (neocaml-mode . prettify-symbols-mode))
+  (neocaml-base-mode . (lambda ()
+			 (setenv "NIX_BUILD_TOP" (temporary-file-directory))))
+  (neocaml-base-mode . qak/lsp-hook)
+  (neocaml-base-mode . prettify-symbols-mode))
 
 (use-package lsp-haskell)
 
