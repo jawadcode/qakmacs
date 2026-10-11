@@ -25,6 +25,11 @@
 
 (setenv "LSP_USE_PLISTS" "true")
 ;; (setenv "HOME" (getenv "USERPROFILE"))
+(defun qak/get-home ()
+  (getenv (if (eq system-type 'windows-nt)
+	      "USERPROFILE"
+	    "HOME")))
+(setq default-directory (qak/get-home))
 
 (let (realhome)
   (when (and (memq system-type '(cygwin windows-nt ms-dos))

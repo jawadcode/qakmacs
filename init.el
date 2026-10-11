@@ -1,15 +1,9 @@
 ;; Initialisation -*- lexical-binding: t -*-
 (setq use-package-compute-statistics t)
 
-;; (if (eq system-type 'windows-nt)
-;;     (when (member "Noto Emoji" (font-family-list))
-;;       (set-fontset-font t
-;;                         'emoji
-;;                         (font-spec :family "Noto Emoji" :size 18)))
-;;   (when (member "Noto Color Emoji" (font-family-list))
-;;     (set-fontset-font t
-;;                       'emoji
-;;                       (font-spec :family "Noto Color Emoji" :size 18))))
+(when (eq system-type 'windows-nt)
+  (add-to-list 'load-path (file-name-concat user-emacs-directory "load-env-vars"))
+  (require 'load-env-vars))
 
 ;; === BEGIN ELPACA LOADER ===
 
