@@ -1,6 +1,10 @@
 ;; Initialisation -*- lexical-binding: t -*-
 (setq use-package-compute-statistics t)
 
+(if (daemonp)
+    (add-hook 'server-after-make-frame-hook #'qak/set-fonts)
+  (qak/set-fonts))
+
 (when (eq system-type 'windows-nt)
   (add-to-list 'load-path (file-name-concat user-emacs-directory "load-env-vars"))
   (require 'load-env-vars))
@@ -168,10 +172,14 @@
   "f" #'find-file
   "q" #'save-buffers-kill-emacs)
 
-(defun qak/join-line-forward () (interactive) (join-line 1))
+;; à la Vim/Helix's `J'
+(defun qak/join-line-forwards ()
+  "Join current line with next line"
+  (interactive) (join-line 1))
 
 ;; Because `comment-dwim' does not in fact do what I mean :p
 (defun qak/comment-line-or-region ()
+  "Comment out higlighted area or line"
   (interactive)
   (if (use-region-p)
       (comment-or-uncomment-region (region-beginning) (region-end))
@@ -181,7 +189,7 @@
   :demand t
   :config
   (helix-mode)
-  (helix-define-key 'normal "J" #'qak/join-line-forward)
+  (helix-define-key 'normal "J" #'qak/join-line-forwards)
   (helix-define-key 'space  "c" #'qak/comment-line-or-region)
   (helix-define-key 'space  "w"   qak/window-map)
   (helix-define-key 'space  "m"   qak/misc-map))
@@ -236,7 +244,7 @@
 ;; === LANGUAGE SUPPORT ===
 
 (defun qak/nix-avail-p ()
-  "Return whether the nix package manager is available"
+  "Whether the `nix' package manager is available"
   (and
    (or (eq system-type 'gnu/linux)
        (eq system-type 'darwin))
@@ -253,84 +261,103 @@
   :hook (elpaca-after-init . envrc-global-mode)
   :config (helix-define-key 'space "e" envrc-command-map))
 
-;; Vastly simplified from doomemacs' `+lsp-optimization-mode' code
-(defvar qak/lsp-gc-optimised-p nil)
+;; (use-package lsp-mode
+;;   :after helix
+;;   :custom
+;;   (lsp-completion-provider     :none)
+;;   (lsp-format-buffer-on-save   t)
+;;   (lsp-keymap-prefix           "C-c l")
+;;   ;; UI
+;;   (lsp-inlay-hint-enable              t)
+;;   (lsp-ui-doc-delay                   0.075)
+;;   (lsp-ui-doc-show-with-mouse         t)
+;;   (lsp-signature-render-documentation nil)
+;;   :hook
+;;   (lsp-mode . lsp-enable-which-key-integration)
+;;   :config
+;;   ;; Bump up garbage collection threshold through `gcmh' to prevent LSP-induced
+;;   ;; allocations from slowing down/freezing the UI.
+;;   (unless (or qak/lsp-gc-optimised-p (fboundp 'igc-info))
+;;     (setq-default gcmh-high-cons-threshold
+;;                   (* 2 (default-value 'gcmh-high-cons-threshold)))
+;;     (gcmh-set-high-threshold)
+;;     (setq qak/lsp-gc-optimised-p t))
 
-(use-package lsp-mode
-  :after helix
-  :custom
-  (lsp-completion-provider     :none)
-  (lsp-format-buffer-on-save   t)
-  (lsp-keymap-prefix           "C-c l")
-  ;; UI
-  (lsp-inlay-hint-enable              t)
-  (lsp-ui-doc-delay                   0.075)
-  (lsp-ui-doc-show-with-mouse         t)
-  (lsp-signature-render-documentation nil)
-  :hook
-  (lsp-mode . lsp-enable-which-key-integration)
+;;   (lsp-register-client
+;;    (make-lsp-client :new-connection (lsp-stdio-connection (lambda () lsp-ocaml-lang-server-command))
+;;                     :major-modes '(neocaml-dune-mode neocaml-ocamllex-mode neocaml-menhir-mode)
+;;                     :priority -1
+;;                     :server-id 'ocaml-ls-aux-filetypes))
+;;   (add-to-list 'lsp-language-id-configuration '(neocaml-dune-mode . "dune"))
+;;   (add-to-list 'lsp-language-id-configuration '(neocaml-ocamllex-mode . "ocaml.ocamllex"))
+;;   (add-to-list 'lsp-language-id-configuration '(neocaml-menhir-mode . "ocaml.menhir"))
+  
+;;   (helix-define-key 'space "a" #'lsp-execute-code-action)
+;;   (helix-define-key 'space "k" #'lsp-ui-doc-glance)
+;;   (helix-define-key 'space "l"   lsp-command-map)
+;;   (helix-define-key 'space "r" #'lsp-rename)
+  
+;;   (define-key helix-goto-map "d" #'lsp-find-definition)
+;;   (define-key helix-goto-map "i" #'lsp-find-implementation)
+;;   (define-key helix-goto-map "r" #'lsp-find-references)
+;;   (define-key helix-goto-map "y" #'lsp-find-type-definition))
+
+;; (use-package lsp-ui)
+
+(use-package eglot
+  :ensure nil ; Built-in package
+  :custom (eglot-events-buffer-config '(:size 0 :format full))
+  ;; :init (fset #'jsonrpc--log-event #'ignore)
   :config
-  ;; Bump up garbage collection threshold through `gcmh' to prevent LSP-induced
-  ;; allocations from slowing down/freezing the UI.
-  (unless (or qak/lsp-gc-optimised-p (fboundp 'igc-info))
-    (setq-default gcmh-high-cons-threshold
-                  (* 2 (default-value 'gcmh-high-cons-threshold)))
-    (gcmh-set-high-threshold)
-    (setq qak/lsp-gc-optimised-p t))
+  (add-to-list 'eglot-server-programs '(toml-ts-mode . ("taplo" "lsp" "stdio")))
+  (add-to-list 'eglot-server-programs '(meson-mode   . ("mesonlsp" "--lsp")))
+  (add-to-list 'eglot-server-programs '(qaml-ts-mode . ("qmlls" "-E")))
+  ;; (add-to-list 'eglot-server-programs
+  ;;              '(haskell-ts-mode . ("haskell-language-server-wrapper" "--lsp")))
+  ;; TODO: Customise `python-ts-mode' to use `rass' (rassumfrassum) to multiplex based-pyright and ruff
+  :hook (python-ts-mode . eglot-ensure))
 
-  (lsp-register-client
-   (make-lsp-client :new-connection (lsp-stdio-connection (lambda () lsp-ocaml-lang-server-command))
-                    :major-modes '(neocaml-dune-mode neocaml-ocamllex-mode neocaml-menhir-mode)
-                    :priority -1
-                    :server-id 'ocaml-ls-aux-filetypes))
-  (add-to-list 'lsp-language-id-configuration '(neocaml-dune-mode . "dune"))
-  (add-to-list 'lsp-language-id-configuration '(neocaml-ocamllex-mode . "ocaml.ocamllex"))
-  (add-to-list 'lsp-language-id-configuration '(neocaml-menhir-mode . "ocaml.menhir"))
-  
-  (helix-define-key 'space "a" #'lsp-execute-code-action)
-  (helix-define-key 'space "k" #'lsp-ui-doc-glance)
-  (helix-define-key 'space "l"   lsp-command-map)
-  (helix-define-key 'space "r" #'lsp-rename)
-  
-  (define-key helix-goto-map "d" #'lsp-find-definition)
-  (define-key helix-goto-map "i" #'lsp-find-implementation)
-  (define-key helix-goto-map "r" #'lsp-find-references)
-  (define-key helix-goto-map "y" #'lsp-find-type-definition))
+(use-package eldoc :ensure nil)
+(use-package eldoc-mouse
+  :custom (eldoc-mouse-idle-time 0.15)
+  :hook eldoc-mode
+  :config (helix-define-key 'space "k" #'eldoc-mouse-pop-doc-at-cursor))
 
-(use-package lsp-ui)
+(defun qak/after-save-format-hook ()
+  "Runs only in eglot-managed buffers"
+  (when (eglot-managed-p) (eglot-format-buffer)))
 
-(defun qak/lsp-hook ()
-  "Enable LSP with inlay hints"
-  (lsp-deferred)
-  (lsp-inlay-hints-mode))
+(add-hook 'after-save-hook #'qak/after-save-format-hook)
 
-(use-package lsp-rust
-  :ensure nil
-  :after lsp-mode
-  :custom
-  (lsp-rust-analyzer-display-chaining-hints                t)
-  (lsp-rust-analyzer-display-parameter-hints               t)
-  (lsp-rust-analyzer-display-closure-return-type-hints     t)
-  (lsp-rust-analyzer-display-lifetime-elision-hints-enable t))
+(defun qak/lsp-hook () "Enable LSP" (eglot-ensure))
 
-(use-package lsp-nix
-  :ensure nil
-  :after lsp-mode
-  :hook (nix-ts-mode . qak/lsp-hook)
-  :custom (lsp-nix-nixd-formatting-command ["nixpkgs-fmt"]))
+;; (use-package lsp-rust
+;;   :ensure nil
+;;   :after lsp-mode
+;;   :custom
+;;   (lsp-rust-analyzer-display-chaining-hints                t)
+;;   (lsp-rust-analyzer-display-parameter-hints               t)
+;;   (lsp-rust-analyzer-display-closure-return-type-hints     t)
+;;   (lsp-rust-analyzer-display-lifetime-elision-hints-enable t))
+
+;; (use-package lsp-nix
+;;   :ensure nil
+;;   :after lsp-mode
+;;   :hook (nix-ts-mode . qak/lsp-hook)
+;;   :custom (lsp-nix-nixd-formatting-command ["nixpkgs-fmt"]))
 
 ;; 3rd-party package
-(use-package lsp-pyright
-  :hook (python-mode . (lambda () (require 'lsp-pyright) (qak/lsp-hook)))
-  :custom (lsp-pyright-langserver-command "basedpyright"))
+;; (use-package lsp-pyright
+;;   :hook (python-mode . (lambda () (require 'lsp-pyright) (qak/lsp-hook)))
+;;   :custom (lsp-pyright-langserver-command "basedpyright"))
 
-(use-package consult-lsp
-  :after helix
-  :config
-  (helix-define-key 'space "d" #'consult-lsp-file-diagnostics)
-  (helix-define-key 'space "D" #'consult-lsp-diagnostics)
-  (helix-define-key 'space "s" #'consult-lsp-file-symbols)
-  (helix-define-key 'space "S" #'consult-lsp-symbols))
+;; (use-package consult-lsp
+;;   :after helix
+;;   :config
+;;   (helix-define-key 'space "d" #'consult-lsp-file-diagnostics)
+;;   (helix-define-key 'space "D" #'consult-lsp-diagnostics)
+;;   (helix-define-key 'space "s" #'consult-lsp-file-symbols)
+;;   (helix-define-key 'space "S" #'consult-lsp-symbols))
 
 ;; (use-package yasnippet :config (yas-global-mode -1))
 
@@ -339,10 +366,12 @@
 
 (use-package tempel-collection)
 
-(use-package lsp-snippet-tempel
-  :ensure (lsp-snippet-tempel :type git :host github :repo "svaante/lsp-snippet")
-  :after tempel
-  :config (when (featurep 'lsp-mode) (lsp-snippet-tempel-lsp-mode-init)))
+;; (use-package lsp-snippet-tempel
+;;   :ensure (lsp-snippet-tempel :type git :host github :repo "svaante/lsp-snippet")
+;;   :after tempel
+;;   :config (when (featurep 'lsp-mode) (lsp-snippet-tempel-lsp-mode-init)))
+
+(use-package eglot-tempel :preface (eglot-tempel-mode) :init (eglot-tempel-mode t))
 
 (use-package corfu
   :custom
@@ -377,7 +406,9 @@
   (rust-ts-mode . qak/lsp-hook))
 
 ;; TODO: When emacs 31 comes around this will be built-in
-(use-package markdown-ts-mode :mode ("\\.md\\'" . markdown-ts-mode))
+(use-package markdown-ts-mode
+  :ensure nil
+  :mode ("\\.md\\'" . markdown-ts-mode))
 
 (use-package mixed-pitch
   :hook
@@ -409,9 +440,10 @@
 
 (use-package nix-ts-mode :if (qak/nix-avail-p) :mode "\\.nix\\'")
 
-(add-hook 'toml-ts-mode-hook #'lsp-deferred)
+(add-hook 'toml-ts-mode-hook #'qak/lsp-hook)
 
 (use-package meson-mode :hook (meson-mode . qak/lsp-hook))
+
 (use-package llvm-ts-mode :mode "\\.ll\\'")
 
 (use-package astro-ts-mode
@@ -423,17 +455,14 @@
 (use-package neocaml
   :hook
   (neocaml-base-mode . (lambda ()
-			 (setenv "NIX_BUILD_TOP" (temporary-file-directory))))
+			 (when (qak/nix-avail-p)
+			   (setenv "NIX_BUILD_TOP" (temporary-file-directory)))))
   (neocaml-base-mode . qak/lsp-hook)
   (neocaml-base-mode . prettify-symbols-mode))
 
-(use-package lsp-haskell)
+;; (use-package lsp-haskell)
 
-(use-package haskell-ts-mode
-  :mode "\\.hs\\'"
-  :hook
-  (haskell-ts-mode . prettify-symbols-mode)
-  (haskell-ts-mode . qak/lsp-hook))
+(use-package haskell-mode :hook (haskell-mode . qak/lsp-hook))
 
 (use-package zig-ts-mode
   :mode "\\.\\(zig\\|zon\\)\\'"
@@ -441,18 +470,12 @@
 
 (use-package nael :hook (nael-mode . qak/lsp-hook))
 
-(use-package nael-lsp :after nael)
-
 (use-package qml-ts-mode
   :ensure (qml-ts-mode :type git :host github :repo "xhcoding/qml-ts-mode")
-  :config
-  (add-to-list 'lsp-language-id-configuration '(qml-ts-mode . "qml-ts"))
-  (lsp-register-client
-   (make-lsp-client :new-connection (lsp-stdio-connection '("qmlls" "-E"))
-                    :activation-fn (lsp-activate-on "qml-ts")
-                    :server-id 'qmlls))
   :hook (qml-ts-mode . (lambda ()
-			 (setq-local electric-indent-chars '(?\n ?\( ?\) ?{ ?} ?\[ ?\] ?\; ?,))
+			 (setq-local
+			  electric-indent-chars
+			  '(?\n ?\( ?\) ?{ ?} ?\[ ?\] ?\; ?,))
 			 (qak/lsp-hook))))
 
 (use-package hl-todo :hook (prog-mode . hl-todo-mode))

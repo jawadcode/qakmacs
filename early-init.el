@@ -23,8 +23,8 @@
 (put 'if-let 'byte-obsolete-info nil)
 (put 'when-let 'byte-obsolete-info nil)
 
-(setenv "LSP_USE_PLISTS" "true")
-;; (setenv "HOME" (getenv "USERPROFILE"))
+;; (setenv "LSP_USE_PLISTS" "true")
+
 (defun qak/get-home ()
   (getenv (if (eq system-type 'windows-nt)
 	      "USERPROFILE"
@@ -58,7 +58,8 @@
 ;; Fully suppress vanilla startup screen
 (advice-add #'display-startup-screen :override #'ignore)
 
-(defun set-font ()
+(defun qak/set-fonts ()
+  "Set fonts for windows, macos and linux"
   (progn
     (set-face-attribute 'default        nil :family "Iosevka Term SS07" :height 135)
     (set-face-attribute 'fixed-pitch    nil :family "Iosevka Term SS07")
@@ -77,9 +78,5 @@
       ((eq system-type 'windows-nt) "Segoe UI Emoji")
       ((eq system-type 'darwin)     "Apple Color Emoji")
       ((eq system-type 'gnu/linux)  "Noto Color Emoji")))))
-
-(if (daemonp)
-    (add-hook 'server-after-make-frame-hook #'set-font)
-  (set-font))
 
 (add-to-list 'default-frame-alist '(alpha-background . 85))
