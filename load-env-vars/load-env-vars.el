@@ -12,7 +12,7 @@
     (if (null (file-exists-p file))
         (signal 'file-error
                 (list "No envvar file exists." file
-                      "Run `emacs --script path/to/emaxx/gen-env-file.el`."))
+                      "Run `emacs --no-init-file --script path/to/emaxx/gen-env-file.el`."))
       (with-temp-buffer
         (insert-file-contents file)
         (when-let* ((env (read (current-buffer))))
