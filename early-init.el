@@ -26,9 +26,12 @@
 ;; (setenv "LSP_USE_PLISTS" "true")
 
 (defun qak/get-home ()
-  (getenv (if (eq system-type 'windows-nt)
-	      "USERPROFILE"
-	    "HOME")))
+  (file-name-as-directory
+   (file-truename
+    (getenv (if (eq system-type 'windows-nt)
+		"USERPROFILE"
+	      "HOME")))))
+
 (setq default-directory (qak/get-home))
 
 (let (realhome)
@@ -78,5 +81,8 @@
       ((eq system-type 'windows-nt) "Segoe UI Emoji")
       ((eq system-type 'darwin)     "Apple Color Emoji")
       ((eq system-type 'gnu/linux)  "Noto Color Emoji")))))
+
+;; Fix weird font size bug with emacs-pgtk
+(when (eq system-type 'gnu/linux) (qak/set-fonts))
 
 (add-to-list 'default-frame-alist '(alpha-background . 85))

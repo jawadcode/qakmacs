@@ -104,6 +104,8 @@
   (create-lockfiles               nil)
   ;; Autosave files config
   (auto-save-file-name-transforms `((".*" ,temporary-file-directory t)))
+  
+  (trusted-content '("~/Documents/Projects/"))
   :bind (("C-+"             . text-scale-increase)
          ("C--"             . text-scale-decrease)
          ("C-<wheel-up>"    . text-scale-increase)
@@ -132,7 +134,8 @@
 
 (use-package orderless :demand t :config (setq completion-styles '(orderless basic)))
 
-(use-package consult :demand t :config (setq completion-in-region-function 'consult-completion-in-region))
+(use-package consult :demand t :config
+  (setq completion-in-region-function 'consult-completion-in-region))
 
 ;; === EDITOR FUNCTIONALITY ===
 
@@ -185,6 +188,11 @@
       (comment-or-uncomment-region (region-beginning) (region-end))
     (comment-line 1)))
 
+(defun qak/consult-proj-diag ()
+  "Display project-wide diagnostics"
+  (interactive)
+  (consult-flymake t))
+
 (use-package helix
   :demand t
   :config
@@ -192,8 +200,10 @@
   (helix-define-key 'normal "J" #'qak/join-line-forwards)
   (helix-define-key 'space  "c" #'qak/comment-line-or-region)
   (helix-define-key 'space  "w"   qak/window-map)
-  (helix-define-key 'space  "m"   qak/misc-map))
-
+  (helix-define-key 'space  "m"   qak/misc-map)
+  (helix-define-key 'space  "s" #'consult-imenu)
+  (helix-define-key 'space  "d" #'consult-flymake)
+  (helix-define-key 'space  "D" #'qak/consult-proj-diag))
 
 (use-package which-key
   :custom
@@ -358,6 +368,11 @@
 ;;   (helix-define-key 'space "D" #'consult-lsp-diagnostics)
 ;;   (helix-define-key 'space "s" #'consult-lsp-file-symbols)
 ;;   (helix-define-key 'space "S" #'consult-lsp-symbols))
+
+(use-package consult-eglot
+  :after (helix consult eglot)
+  :config
+  (helix-define-key 'space "S" #'consult-eglot-symbols))
 
 ;; (use-package yasnippet :config (yas-global-mode -1))
 
