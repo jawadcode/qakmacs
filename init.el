@@ -106,6 +106,8 @@
   (auto-save-file-name-transforms `((".*" ,temporary-file-directory t)))
   
   (trusted-content '("~/Documents/Projects/"))
+
+  (switch-to-buffer-obey-display-actions t)
   :bind (("C-+"             . text-scale-increase)
          ("C--"             . text-scale-decrease)
          ("C-<wheel-up>"    . text-scale-increase)
@@ -117,7 +119,12 @@
   (add-to-list 'auto-mode-alist '("\\.cabal\\'" . prog-mode))
   (global-auto-revert-mode)
   (global-tab-line-mode)
-  (window-divider-mode))
+  (window-divider-mode)
+  (add-to-list
+   'display-buffer-alist
+   '((derived-mode . prog-mode)
+     (display-buffer-reuse-window display-buffer-same-window)
+     (reusable-frames . visible))))
 
 (elpaca-wait)
 
@@ -135,7 +142,9 @@
 (use-package orderless :demand t :config (setq completion-styles '(orderless basic)))
 
 (use-package consult :demand t :config
-  (setq completion-in-region-function 'consult-completion-in-region))
+  (setq completion-in-region-function   'consult-completion-in-region
+	xref-show-xrefs-function       #'consult-xref
+        xref-show-definitions-function #'consult-xref))
 
 ;; === EDITOR FUNCTIONALITY ===
 
@@ -195,6 +204,7 @@
 
 (use-package helix
   :demand t
+  :after consult
   :config
   (helix-mode)
   (helix-define-key 'normal "J" #'qak/join-line-forwards)
@@ -222,6 +232,11 @@
   :config
   (helix-define-key 'normal (kbd "C-M-u") #'combobulate-navigate-up)
   (helix-define-key 'normal (kbd "C-M-d") #'combobulate-navigate-down))
+
+(use-package diff-hl
+  :after magit
+  :hook (magit-post-refresh . diff-hl-magit-post-refresh)
+  :config (global-diff-hl-mode) (diff-hl-margin-mode))
 
 (use-package ligature
   :config
@@ -333,11 +348,11 @@
   :hook eldoc-mode
   :config (helix-define-key 'space "k" #'eldoc-mouse-pop-doc-at-cursor))
 
-(defun qak/after-save-format-hook ()
+(defun qak/before-save-format-hook ()
   "Runs only in eglot-managed buffers"
   (when (eglot-managed-p) (eglot-format-buffer)))
 
-(add-hook 'after-save-hook #'qak/after-save-format-hook)
+(add-hook 'before-save-hook #'qak/before-save-format-hook)
 
 (defun qak/lsp-hook () "Enable LSP" (eglot-ensure))
 
