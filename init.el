@@ -508,6 +508,8 @@
 			  '(?\n ?\( ?\) ?{ ?} ?\[ ?\] ?\; ?,))
 			 (qak/lsp-hook))))
 
+(add-hook 'emacs-lisp-mode-hook #'flymake-mode)
+
 (use-package hl-todo :hook (prog-mode . hl-todo-mode))
 
 (use-package consult-todo
