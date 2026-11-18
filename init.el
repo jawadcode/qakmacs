@@ -235,6 +235,7 @@
 
 (use-package diff-hl
   :after magit
+  :demand t
   :hook (magit-post-refresh . diff-hl-magit-post-refresh)
   :config (global-diff-hl-mode) (diff-hl-margin-mode))
 
@@ -346,7 +347,9 @@
 (use-package eldoc-mouse
   :custom (eldoc-mouse-idle-time 0.15)
   :hook eldoc-mode
-  :config (helix-define-key 'space "k" #'eldoc-mouse-pop-doc-at-cursor))
+  :config
+  (advice-add 'eldoc-mouse--posframe-init :after #'mixed-pitch-mode)
+  (helix-define-key 'space "k" #'eldoc-mouse-pop-doc-at-cursor))
 
 (defun qak/before-save-format-hook ()
   "Runs only in eglot-managed buffers"
